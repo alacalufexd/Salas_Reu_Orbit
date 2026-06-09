@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="Salas">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<title>Salas Orbit Garант</title>
+<title>Salas Orbit Garant</title>
 <style>
   :root {
     --bg: #0f172a;
@@ -191,6 +191,22 @@
   .sync-dot.syncing { background: var(--warning); animation: pulse 1s infinite; }
   @keyframes pulse { 50% { opacity: .4; } }
 
+  /* ── ATTENDEES AUTOCOMPLETE ── */
+  .attendees-wrap { position: relative; }
+  .attendees-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius-sm); z-index: 500; max-height: 180px; overflow-y: auto; box-shadow: var(--shadow); display: none; }
+  .attendees-dropdown.show { display: block; }
+  .attendee-option { padding: 8px 12px; cursor: pointer; font-size: .85rem; display: flex; align-items: center; gap: 8px; transition: background .15s; }
+  .attendee-option:hover { background: var(--bg3); }
+  .attendee-option .ao-name { color: var(--text); font-weight: 500; }
+  .attendee-option .ao-email { color: var(--text3); font-size: .78rem; }
+  .attendee-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+  .attendee-tag { display: inline-flex; align-items: center; gap: 4px; background: rgba(59,130,246,.15); border: 1px solid rgba(59,130,246,.3); border-radius: 20px; padding: 3px 8px; font-size: .78rem; color: #93c5fd; }
+  .attendee-tag button { background: none; border: none; color: #93c5fd; cursor: pointer; font-size: .85rem; line-height: 1; padding: 0 2px; opacity: .7; }
+  .attendee-tag button:hover { opacity: 1; }
+
+  /* ── EDIT MODAL ── */
+  .edit-badge { display:inline-flex;align-items:center;gap:6px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:#93c5fd;border-radius:20px;padding:4px 12px;font-size:.78rem;font-weight:600;margin-bottom:1rem; }
+
   /* ── RECURRENCE ── */
   .recur-section { margin-top: 1rem; background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 14px; }
   .recur-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: .85rem; font-weight: 600; cursor: pointer; }
@@ -225,7 +241,7 @@
 <!-- AUTH SCREEN -->
 <div id="auth-screen">
   <div class="auth-card">
-    <div class="auth-logo">🏢</div>
+    <div class="auth-logo" style="font-size:1.8rem;line-height:1;">S</div>
     <h1 class="auth-title">Reserva de Salas</h1>
     <p class="auth-sub">Inicia sesión con tu cuenta Microsoft 365 de la empresa para gestionar y reservar las salas de reuniones en Teams.</p>
     <button class="btn-ms" onclick="signIn()">
@@ -247,11 +263,11 @@
 <!-- CONFIG MODAL -->
 <div class="modal-bg" id="config-modal" style="display:none">
   <div class="modal">
-    <h2>⚙️ Configuración Azure AD</h2>
+    <h2>Configuracion Azure AD</h2>
     <p class="modal-sub">Para que la app funcione con tu cuenta Microsoft, necesitas registrar una aplicación en Azure Active Directory. Sigue estos pasos:</p>
     
-    <p style="font-size:.83rem; color:var(--text2); margin-bottom:.75rem;"><span class="step-badge">1</span> Ve a <a href="https://portal.azure.com" target="_blank" style="color:var(--accent);">portal.azure.com</a> → Azure Active Directory → Registros de aplicaciones → Nueva registro</p>
-    <div class="instruction-block">Nombre: <code>SalasApp</code> · Tipo de cuenta: <code>Cuentas en este directorio organizacional únicamente</code> · URI de redirección: <code>SPA</code> → <code>http://localhost</code> (o el dominio donde alojes la app)</div>
+    <p style="font-size:.83rem; color:var(--text2); margin-bottom:.75rem;"><span class="step-badge">1</span> Ve a <a href="https://portal.azure.com" target="_blank" style="color:var(--accent);">portal.azure.com</a> > Azure Active Directory > Registros de aplicaciones > Nueva registro</p>
+    <div class="instruction-block">Nombre: <code>SalasApp</code> · Tipo de cuenta: <code>Cuentas en este directorio organizacional únicamente</code> · URI de redirección: <code>SPA</code>   <code>http://localhost</code> (o el dominio donde alojes la app)</div>
     
     <p style="font-size:.83rem; color:var(--text2); margin-bottom:.75rem;"><span class="step-badge">2</span> En <b>Permisos de API</b>, agrega permisos delegados de Microsoft Graph:</p>
     <div class="instruction-block"><code>Calendars.ReadWrite</code> · <code>OnlineMeetings.ReadWrite</code> · <code>User.Read</code> · <code>People.Read</code> · Luego haz clic en <code>Conceder consentimiento de administrador</code></div>
@@ -294,7 +310,7 @@
 <div id="app">
   <!-- Top Nav -->
   <nav class="topnav">
-    <div class="nav-logo"><span>🏢</span> Salas de Reuniones</div>
+    <div class="nav-logo">Salas Orbit Garant</div>
     <div class="nav-spacer"></div>
     <div class="sync-status" id="sync-status">
       <div class="sync-dot online" id="sync-dot"></div>
@@ -310,9 +326,9 @@
   <!-- Controls -->
   <div class="controls">
     <div class="week-nav">
-      <button class="icon-btn" onclick="navWeek(-1)">‹</button>
+      <button class="icon-btn" onclick="navWeek(-1)">&lt;</button>
       <span class="week-label" id="week-label"></span>
-      <button class="icon-btn" onclick="navWeek(1)">›</button>
+      <button class="icon-btn" onclick="navWeek(1)">&gt;</button>
     </div>
     <button class="btn-today" onclick="goToday()">Hoy</button>
     <div class="view-toggle">
@@ -336,7 +352,7 @@
 <div class="detail-panel" id="detail-panel">
   <div class="panel-header">
     <h3>Detalle de reserva</h3>
-    <button class="panel-close" onclick="closePanel()">✕</button>
+    <button class="panel-close" onclick="closePanel()">X</button>
   </div>
   <div class="panel-body" id="panel-body"></div>
 </div>
@@ -350,11 +366,11 @@
     <p style="font-size:.82rem;color:var(--text2);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Selecciona la sala</p>
     <div class="sala-selector">
       <div class="sala-card sala1-card" id="sc-sala1" onclick="selectSala(1)">
-        <div class="sala-icon">🟣</div>
+        <div class="sala-icon" style="width:18px;height:18px;border-radius:4px;background:var(--sala1);margin:0 auto 6px;"></div>
         <div class="sala-name" id="sc-sala1-name">Sala de Reuniones Piso 1</div>
       </div>
       <div class="sala-card sala2-card" id="sc-sala2" onclick="selectSala(2)">
-        <div class="sala-icon">🔵</div>
+        <div class="sala-icon" style="width:18px;height:18px;border-radius:4px;background:var(--sala2);margin:0 auto 6px;"></div>
         <div class="sala-name" id="sc-sala2-name">Sala de Reuniones Piso 2</div>
       </div>
     </div>
@@ -378,7 +394,7 @@
       </div>
     </div>
     <div class="conflict-warning" id="conflict-warning">
-      ⚠️ <span id="conflict-msg">Esta sala ya está reservada en ese horario.</span>
+      <span id="conflict-msg">Esta sala ya está reservada en ese horario.</span>
     </div>
     <div class="form-group" style="margin-top:1rem">
       <label>Descripción / Agenda (opcional)</label>
@@ -386,8 +402,14 @@
     </div>
     <div class="form-group">
       <label>Invitar participantes (opcional)</label>
-      <input type="text" id="bk-attendees" placeholder="correo1@orbitgarant.cl, correo2@orbitgarant.cl">
-      <p class="hint">Separa múltiples correos con coma. Recibirán invitación de Teams y quedará en su calendario.</p>
+      <div class="attendees-wrap">
+        <input type="text" id="bk-attendees-input" placeholder="Busca por nombre o escribe correo..." autocomplete="off"
+          oninput="filterAttendees(this.value)" onkeydown="attendeeKeydown(event)" onfocus="filterAttendees(this.value)">
+        <div class="attendees-dropdown" id="attendees-dropdown"></div>
+      </div>
+      <div class="attendee-tags" id="attendee-tags"></div>
+      <input type="hidden" id="bk-attendees">
+      <p class="hint">Selecciona de la lista o escribe un correo y presiona Enter. Recibirán invitación de Teams.</p>
     </div>
     <!-- RECURRENCE -->
     <div class="recur-section">
@@ -435,6 +457,20 @@
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.21.0/lib/msal-browser.min.js"></script>
 
 <script>
+// ── DOMAIN LOCK ──
+(function(){
+  var allowed = ['alacalufexd.github.io', 'localhost', '127.0.0.1'];
+  var host = window.location.hostname.toLowerCase();
+  var ok = allowed.some(function(d){ return host === d || host.endsWith('.'+d); });
+  if (!ok) {
+    document.addEventListener('DOMContentLoaded', function(){
+      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0f172a;color:#334155;font-family:monospace;font-size:.8rem;">not authorized</div>';
+    });
+    // Poison all main functions so nothing works even if DOM is bypassed
+    window._appLocked = true;
+  }
+})();
+
 // ─────────────────────────────────────────────
 //  CONFIG & STATE
 // ─────────────────────────────────────────────
@@ -529,6 +565,7 @@ async function setupMSAL() {
 //  AUTH
 // ─────────────────────────────────────────────
 async function signIn() {
+  if (window._appLocked) return;
   if (!CFG.clientId || !CFG.tenantId) {
     showConfigModal();
     return;
@@ -649,7 +686,7 @@ async function syncFromGraph() {
     const headers = { Authorization: `Bearer ${token}`, Prefer: 'outlook.timezone="America/Santiago"' };
 
     // Estrategia 1: leer el calendario compartido usando el endpoint de usuarios
-    // Esto funciona cuando el calendario de Sala.reuniones está compartido con "Puede editar"
+    // Esto funciona cuando el calendario de asistenteti está compartido con "Puede editar"
     const myEmail = currentUser?.username?.toLowerCase();
     const isCentral = myEmail === CFG.centralAccount.toLowerCase();
 
@@ -708,10 +745,10 @@ function mergeGraphEvents(graphEvents) {
       sala: sala,
       start: ge.start.dateTime || ge.start,
       end: ge.end.dateTime || ge.end,
-      organizer: (ge.organizer?.emailAddress?.name || ge.organizer?.emailAddress?.address || 'Desconocido').replace(/60□s /g,''),
+      organizer: ge.organizer?.emailAddress?.name || 'Desconocido',
       organizerEmail: ge.organizer?.emailAddress?.address,
       teamsUrl: ge.onlineMeeting?.joinUrl || null,
-      description: (ge.body?.content || '').replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'').trim().slice(0,200)
+      description: ge.body?.content?.replace(/<[^>]+>/g, '').trim().slice(0, 200) || ''
     };
     if (idx >= 0) events[idx] = ev; // actualizar existente
     else events.push(ev);           // agregar nuevo
@@ -740,7 +777,7 @@ async function createGraphEvent(eventData) {
   // ── Construir lista de asistentes ──
   const attendees = [];
 
-  // 1. El creador SIEMPRE queda como asistente requerido → aparece en su Teams
+  // 1. El creador SIEMPRE queda como asistente requerido   aparece en su Teams
   if (!isCentral) {
     attendees.push({
       emailAddress: { address: myEmail, name: myName },
@@ -882,7 +919,7 @@ function openBookingModal(prefillDate = null, prefillHour = null) {
   document.getElementById('bk-end').value = pad(h + 1) + ':00';
   document.getElementById('bk-title').value = '';
   document.getElementById('bk-desc').value = '';
-  document.getElementById('bk-attendees').value = '';
+  resetAttendees();
   // Reset recurrence
   recurEnabled = false;
   document.getElementById('recur-toggle').classList.remove('on');
@@ -900,7 +937,208 @@ function openBookingModal(prefillDate = null, prefillHour = null) {
   document.getElementById('bk-date').addEventListener('change', checkFormConflict);
 }
 
-function closeBookingModal() { document.getElementById('booking-modal').style.display = 'none'; }
+function closeBookingModal() {
+  document.getElementById('booking-modal').style.display = 'none';
+  editingEventId = null;
+  document.getElementById('booking-modal').querySelector('h2').textContent = 'Nueva reserva de sala';
+  const badge = document.getElementById('edit-mode-badge');
+  if (badge) badge.remove();
+}
+
+// ── EDIT MODE ──
+let editingEventId = null;
+
+function editBooking(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return;
+  closePanel();
+
+  // If recurring, ask scope
+  if (ev.isRecurring) {
+    const scope = confirm('Esta reunión es parte de una serie.\n\nAceptar = Modificar TODA la serie\nCancelar = Modificar solo este día');
+    editingEventId = scope ? 'series:' + ev.recurGroup : id;
+  } else {
+    editingEventId = id;
+  }
+
+  // Pre-fill form
+  const start = new Date(ev.start);
+  const end = new Date(ev.end);
+  openBookingModal(formatDateLocal(start), null);
+  setTimeout(() => {
+    document.getElementById('bk-title').value = ev.title;
+    document.getElementById('bk-date').value = formatDateLocal(start);
+    document.getElementById('bk-start').value = formatTime(start);
+    document.getElementById('bk-end').value = formatTime(end);
+    document.getElementById('bk-desc').value = ev.description || '';
+    selectSala(ev.sala);
+    // Pre-fill attendees
+    if (ev.attendees && ev.attendees.length > 0) {
+      ev.attendees.forEach(email => addAttendeTag(email));
+    }
+    // Edit badge
+    const modal = document.getElementById('booking-modal');
+    const h2 = modal.querySelector('h2');
+    h2.textContent = 'Modificar reserva';
+    if (!document.getElementById('edit-mode-badge')) {
+      const badge = document.createElement('div');
+      badge.id = 'edit-mode-badge';
+      badge.className = 'edit-badge';
+      badge.innerHTML = '[ Editando ] ' + escHtml(ev.title);
+      h2.after(badge);
+    }
+  }, 50);
+}
+
+// ── ATTENDEES AUTOCOMPLETE ──
+// ── DIRECTORIO BASE (siempre disponible) ──
+const MDA_USERS_BASE = [
+  { name: 'Soporte Orbit', email: 'soporte@orbitgarant.cl', freq: 0 },
+  { name: 'Sala Reuniones', email: 'Sala.reuniones@orbitgarant.cl', freq: 0 },
+];
+
+// ── DIRECTORIO DINÁMICO (aprendido de invitaciones pasadas) ──
+// Carga desde localStorage y fusiona con la base
+function loadKnownAttendees() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('salasapp_known_attendees') || '[]');
+    const map = {};
+    // Base primero
+    MDA_USERS_BASE.forEach(u => { map[u.email.toLowerCase()] = { ...u }; });
+    // Sobre-escribir/agregar con los aprendidos (pueden tener mayor freq)
+    saved.forEach(u => {
+      const key = u.email.toLowerCase();
+      if (map[key]) {
+        map[key].freq = Math.max(map[key].freq || 0, u.freq || 0);
+        if (u.name && u.name !== u.email) map[key].name = u.name; // actualizar nombre si mejoró
+      } else {
+        map[key] = { ...u };
+      }
+    });
+    return Object.values(map).sort((a,b) => (b.freq||0) - (a.freq||0));
+  } catch(e) { return [...MDA_USERS_BASE]; }
+}
+
+function saveKnownAttendees(list) {
+  try {
+    // Solo guardar los aprendidos (no base), con su freq
+    const toSave = list.filter(u => !MDA_USERS_BASE.find(b => b.email.toLowerCase() === u.email.toLowerCase()) || u.freq > 0);
+    localStorage.setItem('salasapp_known_attendees', JSON.stringify(toSave));
+  } catch(e) {}
+}
+
+// Registrar que se invitó a alguien - incrementa su frecuencia
+function learnAttendees(emailList) {
+  if (!emailList || emailList.length === 0) return;
+  const current = loadKnownAttendees();
+  const map = {};
+  current.forEach(u => { map[u.email.toLowerCase()] = { ...u }; });
+  emailList.forEach(email => {
+    email = email.toLowerCase().trim();
+    if (!email.includes('@')) return;
+    if (map[email]) {
+      map[email].freq = (map[email].freq || 0) + 1;
+    } else {
+      // Nuevo asistente aprendido - intentar extraer nombre del email
+      const namePart = email.split('@')[0].replace(/[._-]/g,' ').replace(/\w/g, c => c.toUpperCase());
+      map[email] = { name: namePart, email, freq: 1, learned: true };
+    }
+  });
+  const updated = Object.values(map).sort((a,b) => (b.freq||0) - (a.freq||0));
+  saveKnownAttendees(updated);
+}
+
+let selectedAttendees = [];
+
+function filterAttendees(val) {
+  const dd = document.getElementById('attendees-dropdown');
+  const q = val.trim().toLowerCase();
+  const allUsers = loadKnownAttendees();
+
+  let matches = allUsers.filter(u => {
+    if (selectedAttendees.includes(u.email.toLowerCase())) return false;
+    if (q.length === 0) return true;
+    return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+  });
+
+  // Limit to top 8 results
+  matches = matches.slice(0, 8);
+
+  if (matches.length === 0 && q.length === 0) { dd.classList.remove('show'); return; }
+  if (matches.length === 0 && q.length > 0) {
+    // Show hint to press Enter
+    dd.innerHTML = q.includes('@')
+      ? `<div class="attendee-option" onclick="addAttendeTag('${q}')"><div><div class="ao-name">${escHtml(q)}</div><div class="ao-email">Presiona Enter para agregar</div></div></div>`
+      : `<div style="padding:10px 14px;font-size:.8rem;color:var(--text3)">No encontrado - escribe el correo completo y presiona Enter</div>`;
+    dd.classList.add('show');
+    return;
+  }
+
+  dd.innerHTML = matches.map(u => {
+    const freqBadge = u.freq > 2 ? `<span style="font-size:.68rem;color:var(--text3);margin-left:4px;">×${u.freq}</span>` : '';
+    const learnedIcon = u.learned ? '* ' : '';
+    return `<div class="attendee-option" onclick="addAttendeTag('${u.email}','${escHtml(u.name)}')">
+      <div style="flex:1"><div class="ao-name">${learnedIcon}${escHtml(u.name)}${freqBadge}</div><div class="ao-email">${escHtml(u.email)}</div></div>
+    </div>`;
+  }).join('');
+  dd.classList.add('show');
+}
+
+function attendeeKeydown(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const val = e.target.value.trim();
+    if (val.includes('@')) { addAttendeTag(val); }
+  }
+  if (e.key === 'Escape') { document.getElementById('attendees-dropdown').classList.remove('show'); }
+}
+
+function addAttendeTag(email, name) {
+  email = email.toLowerCase().trim();
+  if (!email || selectedAttendees.includes(email)) {
+    document.getElementById('attendees-dropdown').classList.remove('show');
+    document.getElementById('bk-attendees-input').value = '';
+    return;
+  }
+  selectedAttendees.push(email);
+  syncAttendeeField();
+  renderAttendeeTags();
+  document.getElementById('bk-attendees-input').value = '';
+  document.getElementById('attendees-dropdown').classList.remove('show');
+}
+
+function removeAttendee(email) {
+  selectedAttendees = selectedAttendees.filter(e => e !== email);
+  syncAttendeeField();
+  renderAttendeeTags();
+}
+
+function syncAttendeeField() {
+  document.getElementById('bk-attendees').value = selectedAttendees.join(',');
+}
+
+function renderAttendeeTags() {
+  const container = document.getElementById('attendee-tags');
+  container.innerHTML = selectedAttendees.map(email =>
+    `<div class="attendee-tag">${escHtml(email)}<button onclick="removeAttendee('${email}')" title="Quitar">×</button></div>`
+  ).join('');
+}
+
+function resetAttendees() {
+  selectedAttendees = [];
+  syncAttendeeField();
+  renderAttendeeTags();
+  document.getElementById('bk-attendees-input').value = '';
+  document.getElementById('attendees-dropdown').classList.remove('show');
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.attendees-wrap')) {
+    const dd = document.getElementById('attendees-dropdown');
+    if (dd) dd.classList.remove('show');
+  }
+});
 
 // ── RECURRENCE ──
 let recurEnabled = false;
@@ -927,10 +1165,10 @@ function updateRecurInfo() {
 
   if (end > maxEnd) {
     document.getElementById('bk-recur-end').value = formatDateLocal(maxEnd);
-    document.getElementById('recur-info').textContent = '⚠️ Máximo 6 meses. Fecha ajustada automáticamente.';
+    document.getElementById('recur-info').textContent = 'Maximo 6 meses. Fecha ajustada automáticamente.';
     return;
   }
-  if (end <= start) { document.getElementById('recur-info').textContent = '⚠️ La fecha de término debe ser posterior al inicio.'; return; }
+  if (end <= start) { document.getElementById('recur-info').textContent = 'La fecha de termino debe ser posterior al inicio.'; return; }
 
   const freqDays = { daily: 1, weekly: 7, biweekly: 14, monthly: 30 };
   const freqLabel = { daily: 'día', weekly: 'semana', biweekly: '2 semanas', monthly: 'mes' };
@@ -999,10 +1237,13 @@ async function createBooking() {
   const start = document.getElementById('bk-start').value;
   const end = document.getElementById('bk-end').value;
   const desc = document.getElementById('bk-desc').value.trim();
-  const attendeesRaw = document.getElementById('bk-attendees').value.trim();
-  const extraAttendees = attendeesRaw
-    ? attendeesRaw.split(',').map(e => e.trim()).filter(e => e.includes('@'))
-    : [];
+  const extraAttendees = [...selectedAttendees];
+
+  // ── EDIT MODE ──
+  if (editingEventId) {
+    await applyEdit(editingEventId, { title, date, start, end, desc, sala: selectedSala, attendees: extraAttendees });
+    return;
+  }
 
   if (!title) { toast('Ingresa un título para la reunión', 'error'); return; }
   if (!date || !start || !end) { toast('Completa todos los campos de fecha y hora', 'error'); return; }
@@ -1031,7 +1272,7 @@ async function createBooking() {
 
     // Skip if conflict on this date
     if (checkConflict(selectedSala, s, e)) {
-      toast(`⚠️ Conflicto el ${d}, se omitió`, 'info', 2500);
+      toast(`Conflicto el ${d}, se omitió`, 'info', 2500);
       continue;
     }
 
@@ -1067,15 +1308,18 @@ async function createBooking() {
     createdCount++;
   }
 
+  // Aprender asistentes para sugerencias futuras
+  if (extraAttendees.length > 0) learnAttendees(extraAttendees);
+
   saveEvents();
   hideLoading();
 
   if (createdCount === 0) {
     toast('No se crearon reservas (todos los horarios tienen conflicto)', 'error');
   } else if (allDates.length > 1) {
-    toast(`✅ ${createdCount} reuniones recurrentes creadas en Teams`, 'success');
+    toast(`${createdCount} reuniones recurrentes creadas en Teams`, 'success');
   } else {
-    toast('✅ Reserva creada y sincronizada con Teams', 'success');
+    toast('Reserva creada y sincronizada con Teams', 'success');
   }
 
   renderCalendar();
@@ -1093,28 +1337,31 @@ function openPanel(event) {
   
   document.getElementById('panel-body').innerHTML = `
     <div class="panel-sala-badge sala${event.sala}">
-      ${event.sala === 1 ? '🟣' : '🔵'} ${salaName}
+      ${salaName}
     </div>
     <h2 style="font-size:1.05rem;font-weight:700;margin-bottom:.5rem;line-height:1.4">${escHtml(event.title)}</h2>
-    ${event.isRecurring ? '<div style="display:inline-flex;align-items:center;gap:5px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#fcd34d;border-radius:20px;padding:3px 10px;font-size:.75rem;font-weight:600;margin-bottom:.75rem;">🔁 Reunión recurrente</div>' : ''}
+    ${event.isRecurring ? '<div style="display:inline-flex;align-items:center;gap:5px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#fcd34d;border-radius:20px;padding:3px 10px;font-size:.75rem;font-weight:600;margin-bottom:.75rem;">&#x21BA; Reunión recurrente</div>' : ''}
     
     <div class="panel-field">
-      <div class="panel-field-label">📅 Fecha</div>
+      <div class="panel-field-label">FECHA</div>
       <div class="panel-field-value">${formatDateDisplay(startDate)}</div>
     </div>
     <div class="panel-field">
-      <div class="panel-field-label">🕐 Horario</div>
+      <div class="panel-field-label">HORARIO</div>
       <div class="panel-field-value">${formatTime(startDate)} - ${formatTime(endDate)} <span style="color:var(--text3);font-size:.8rem">(${getDuration(startDate,endDate)})</span></div>
     </div>
     <div class="panel-field">
-      <div class="panel-field-label">👤 Organizada por</div>
+      <div class="panel-field-label">ORGANIZADA POR</div>
       <div class="panel-field-value">${escHtml(event.organizer)}</div>
     </div>
-    ${event.description ? `<div class="panel-field"><div class="panel-field-label">📝 Descripción</div><div class="panel-field-value" style="color:var(--text2);font-size:.85rem">${escHtml(event.description)}</div></div>` : ''}
-    ${event.attendees && event.attendees.length > 0 ? `<div class="panel-field"><div class="panel-field-label">👥 Participantes</div><div class="panel-field-value" style="color:var(--text2);font-size:.85rem">${event.attendees.map(a => escHtml(a)).join('<br>')}</div></div>` : ''}
+    ${event.description ? `<div class="panel-field"><div class="panel-field-label">DESCRIPCION</div><div class="panel-field-value" style="color:var(--text2);font-size:.85rem">${escHtml(event.description.replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').trim())}</div></div>` : ''}
+    ${event.attendees && event.attendees.length > 0 ? `<div class="panel-field"><div class="panel-field-label">PARTICIPANTES</div><div class="panel-field-value" style="color:var(--text2);font-size:.85rem">${event.attendees.map(a => escHtml(a)).join('<br>')}</div></div>` : ''}
     <hr class="panel-divider">
-    ${event.teamsUrl ? `<a href="${event.teamsUrl}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:11px 14px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:var(--radius);color:#93c5fd;text-decoration:none;font-size:.85rem;font-weight:600;margin-bottom:.75rem;">🔗 Unirse a la reunión de Teams</a>` : ''}
-    ${canCancelEvent(event) ? `<button class="btn-cancel-event" onclick="cancelBooking('${event.id}')">🗑️ Cancelar esta reserva</button>` : '<p style="font-size:.8rem;color:var(--text3);text-align:center;margin-top:.5rem">Solo los administradores pueden cancelar reservas.</p>'}
+    ${event.teamsUrl ? `<a href="${event.teamsUrl}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:11px 14px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:var(--radius);color:#93c5fd;text-decoration:none;font-size:.85rem;font-weight:600;margin-bottom:.75rem;">&#x25B6; Unirse a la reuni&#243;n de Teams</a>` : ''}
+    ${canCancelEvent(event) ? `
+      <button class="btn-cancel-event" style="background:rgba(59,130,246,.1);color:#93c5fd;border-color:rgba(59,130,246,.3);margin-bottom:.5rem;" onclick="editBooking('${event.id}')">/ Modificar esta reserva</button>
+      <button class="btn-cancel-event" onclick="cancelBooking('${event.id}')">x Cancelar esta reserva</button>
+    ` : '<p style="font-size:.8rem;color:var(--text3);text-align:center;margin-top:.5rem">Solo el organizador o un administrador puede modificar esta reserva.</p>'}
   `;
   document.getElementById('detail-panel').classList.add('open');
 }
@@ -1137,21 +1384,104 @@ function closePanel() {
 async function cancelBooking(id) {
   const event = events.find(e => e.id === id);
   if (!event) return;
-  if (!confirm(`¿Cancelar la reserva "${event.title}"? Esta acción eliminará la reunión del calendario de Teams.`)) return;
+
+  // If recurring, ask whether to delete just this or the whole series
+  let deleteSeries = false;
+  if (event.isRecurring) {
+    const ans = confirm('Esta reunión es parte de una serie.\n\nAceptar = Eliminar TODA la serie\nCancelar = Eliminar solo este día');
+    deleteSeries = ans;
+  } else {
+    if (!confirm(`¿Cancelar la reserva "${event.title}"?`)) return;
+  }
+
   closePanel();
   showLoading('Cancelando reunión...');
-  
-  if (event.graphId && isGraphAvailable) {
-    const ok = await cancelGraphEvent(event.graphId);
-    if (ok) toast('Reunión cancelada y eliminada de Teams', 'success');
-    else toast('Error al eliminar de Teams (removida localmente)', 'error');
+
+  if (deleteSeries && event.recurGroup) {
+    // Delete all events in the series
+    const seriesEvents = events.filter(e => e.recurGroup === event.recurGroup);
+    let deleted = 0;
+    for (const ev of seriesEvents) {
+      if (ev.graphId && isGraphAvailable) await cancelGraphEvent(ev.graphId);
+      deleted++;
+    }
+    events = events.filter(e => e.recurGroup !== event.recurGroup);
+    toast(`Serie eliminada (${deleted} reuniones)`, 'success');
   } else {
-    toast('Reserva cancelada', 'success');
+    if (event.graphId && isGraphAvailable) {
+      const ok = await cancelGraphEvent(event.graphId);
+      if (ok) toast('Reunión cancelada y eliminada de Teams', 'success');
+      else toast('Eliminada localmente', 'info');
+    } else {
+      toast('Reserva cancelada', 'success');
+    }
+    events = events.filter(e => e.id !== id);
   }
-  
-  events = events.filter(e => e.id !== id);
+
   saveEvents();
   hideLoading();
+  renderCalendar();
+}
+
+async function applyEdit(editId, data) {
+  const { title, date, start, end, desc, sala, attendees } = data;
+  const startDt = date + 'T' + start + ':00';
+  const endDt = date + 'T' + end + ':00';
+
+  if (!title) { toast('Ingresa un título', 'error'); return; }
+  if (new Date(startDt) >= new Date(endDt)) { toast('La hora fin debe ser posterior al inicio', 'error'); return; }
+
+  closeBookingModal();
+  showLoading('Aplicando cambios...');
+
+  const isSeries = editId.startsWith('series:');
+  const recurGroup = isSeries ? editId.replace('series:', '') : null;
+  const targetEvents = isSeries
+    ? events.filter(e => e.recurGroup === recurGroup)
+    : events.filter(e => e.id === editId);
+
+  for (const ev of targetEvents) {
+    // Compute new start/end preserving date for series edits
+    const evDate = isSeries ? formatDateLocal(new Date(ev.start)) : date;
+    const newStart = evDate + 'T' + start + ':00';
+    const newEnd = evDate + 'T' + end + ':00';
+
+    // Cancel old Graph event and create new one
+    if (ev.graphId && isGraphAvailable) await cancelGraphEvent(ev.graphId);
+
+    const newEventData = {
+      ...ev,
+      title,
+      sala,
+      start: newStart,
+      end: newEnd,
+      description: desc,
+      attendees,
+      graphId: null,
+      teamsUrl: null
+    };
+
+    if (isGraphAvailable && currentUser) {
+      try {
+        const created = await createGraphEvent(newEventData);
+        if (created && created.id) {
+          newEventData.graphId = created.id;
+          newEventData.teamsUrl = created.onlineMeeting?.joinUrl || null;
+          newEventData.id = 'graph_' + created.id;
+        }
+      } catch(e) {}
+    }
+
+    const idx = events.findIndex(e => e.id === ev.id);
+    if (idx >= 0) events[idx] = newEventData;
+  }
+
+  // Aprender asistentes del edit también
+  if (attendees.length > 0) learnAttendees(attendees);
+
+  saveEvents();
+  hideLoading();
+  toast(isSeries ? `Serie actualizada (${targetEvents.length} reuniones)` : 'Reserva actualizada', 'success');
   renderCalendar();
 }
 
@@ -1276,7 +1606,7 @@ function renderDay() {
 
   if (dayEvents.length === 0) {
     html += `<div style="grid-column:2;padding:3rem;text-align:center;color:var(--text3);">
-      <div style="font-size:2.5rem;margin-bottom:.5rem">📅</div>
+      <div style="font-size:2rem;margin-bottom:.5rem;color:var(--text3)">[ ]</div>
       No hay reservas este día. <a href="#" onclick="openBookingModal('${dateStr}')" style="color:var(--accent)">Crear una</a>
     </div>`;
   }
@@ -1296,7 +1626,7 @@ function renderEventBlock(ev, date) {
   return `<div class="event-block ${salaClass}" style="top:${topPx}px;height:${heightPx}px" onclick="openPanelById('${ev.id}'); event.stopPropagation();">
     <div class="event-title">${escHtml(ev.title)}</div>
     ${heightPx > 36 ? `<div class="event-time">${formatTime(start)}-${formatTime(end)}</div>` : ''}
-    ${heightPx > 52 ? `<div class="event-organizer">👤 ${escHtml(ev.organizer)}</div>` : ''}
+    ${heightPx > 52 ? `<div class="event-organizer">${escHtml(ev.organizer)}</div>` : ''}
   </div>`;
 }
 
@@ -1371,7 +1701,7 @@ function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return
 function isSameDay(a, b) { return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
 function formatDateLocal(d) { return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 function formatTime(d) { return pad(d.getHours())+':'+pad(d.getMinutes()); }
-function formatDateDisplay(d) { return DAYS_ES[d.getDay()]+' '+d.getDate()+' de '+MONTHS_ES[d.getMonth()]+' de '+d.getFullYear(); }
+function formatDateDisplay(d) { return `${DAYS_ES[d.getDay()]} ${d.getDate()} de ${MONTHS_ES[d.getMonth()]} de ${d.getFullYear()}`; }
 function getDuration(s, e) { const m = (e-s)/60000; return m >= 60 ? (m/60)+'h' : m+'min'; }
 function pad(n) { return String(n).padStart(2,'0'); }
 function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -1428,5 +1758,11 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 </script>
+<div style="position:fixed;bottom:10px;right:14px;z-index:9999;text-align:right;pointer-events:none;">
+  <div style="font-size:.7rem;color:rgba(148,163,184,0.55);line-height:1.7;font-family:monospace;letter-spacing:.03em;">
+    <div style="font-weight:600;">v1.3.2</div>
+    <div style="font-size:.62rem;color:rgba(148,163,184,0.4);">alacalufe-software</div>
+  </div>
+</div>
 </body>
 </html>

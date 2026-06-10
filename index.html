@@ -733,6 +733,36 @@ async function syncFromGraph() {
   }
 }
 
+// Extract real organizer name from event body HTML
+function extractOrganizer(ge) {
+  const body = ge.body?.content || '';
+  const plain = body.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  const match = plain.match(/Organiza[^:]*:\s*([^(]+?)\s*\(/i);
+  if (match && match[1].trim()) return match[1].trim();
+  const name = ge.organizer?.emailAddress?.name || '';
+  const email = ge.organizer?.emailAddress?.address || '';
+  const centralEmail = CFG.centralAccount.toLowerCase();
+  if (email.toLowerCase() === centralEmail) return 'Desconocido';
+  return name || email || 'Desconocido';
+}
+
+function extractOrganizerEmail(ge) {
+  const body = ge.body?.content || '';
+  const plain = body.replace(/<[^>]+>/g, ' ');
+  const match = plain.match(/Organiza[^:]*:[^(]*\(([^)@\s]+@[^)\s]+)\)/i);
+  if (match && match[1].trim()) return match[1].trim();
+  return ge.organizer?.emailAddress?.address || null;
+}
+
+function extractDescription(bodyHtml) {
+  const plain = bodyHtml.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&#[0-9]+;/g,'').replace(/\s+/g,' ').trim();
+  const descMatch = plain.match(/Descripcion:\s*([^R]+?)(?:Reservado|$)/i);
+  if (descMatch && descMatch[1].trim() && descMatch[1].trim().toLowerCase() !== 'sin descripcion') {
+    return descMatch[1].trim().slice(0, 200);
+  }
+  return '';
+}
+
 function mergeGraphEvents(graphEvents) {
   graphEvents.forEach(ge => {
     const sala = detectSala(ge);
@@ -745,10 +775,10 @@ function mergeGraphEvents(graphEvents) {
       sala: sala,
       start: ge.start.dateTime || ge.start,
       end: ge.end.dateTime || ge.end,
-      organizer: ge.organizer?.emailAddress?.name || 'Desconocido',
-      organizerEmail: ge.organizer?.emailAddress?.address,
+      organizer: extractOrganizer(ge),
+      organizerEmail: extractOrganizerEmail(ge),
       teamsUrl: ge.onlineMeeting?.joinUrl || null,
-      description: ge.body?.content?.replace(/<[^>]+>/g, '').trim().slice(0, 200) || ''
+      description: extractDescription(ge.body?.content || '')
     };
     if (idx >= 0) events[idx] = ev; // actualizar existente
     else events.push(ev);           // agregar nuevo
@@ -1580,7 +1610,7 @@ function renderWeek() {
       html += `<div class="current-time-line" style="top:${pct}px"></div>`;
     }
     // Events
-    dayEvents.forEach(ev => { html += renderEventBlock(ev, d); });
+    dayEvents.forEach(ev => { html += renderEventBlock(ev, d, dayEvents); });
     html += '</div>';
   });
   html += '</div></div>';
@@ -1621,7 +1651,7 @@ function renderDay() {
     const pct = getTimePct();
     html += `<div class="current-time-line" style="top:${pct}px"></div>`;
   }
-  dayEvents.forEach(ev => { html += renderEventBlock(ev, d); });
+  dayEvents.forEach(ev => { html += renderEventBlock(ev, d, dayEvents); });
   html += '</div>';
 
   if (dayEvents.length === 0) {
@@ -1636,14 +1666,34 @@ function renderDay() {
   scrollToWorkHours();
 }
 
-function renderEventBlock(ev, date) {
+function renderEventBlock(ev, date, allDayEvents) {
   const start = new Date(ev.start);
   const end = new Date(ev.end);
   const topPx = ((start.getHours() + start.getMinutes()/60) - HOURS_START) * SLOT_H;
   const heightPx = Math.max(((end.getHours() + end.getMinutes()/60) - (start.getHours() + start.getMinutes()/60)) * SLOT_H, 24);
   const salaClass = 'sala' + ev.sala;
-  
-  return `<div class="event-block ${salaClass}" style="top:${topPx}px;height:${heightPx}px" onclick="openPanelById('${ev.id}'); event.stopPropagation();">
+
+  // Detect overlapping events in same column to split width
+  const evStart = start.getTime();
+  const evEnd = end.getTime();
+  const overlaps = (allDayEvents || []).filter(other => {
+    if (other.id === ev.id) return false;
+    const oStart = new Date(other.start).getTime();
+    const oEnd = new Date(other.end).getTime();
+    return evStart < oEnd && evEnd > oStart;
+  });
+
+  let leftPct = 2, widthPct = 96;
+  if (overlaps.length > 0) {
+    // Assign columns: sort by id for stable ordering
+    const group = [ev, ...overlaps].sort((a,b) => a.id < b.id ? -1 : 1);
+    const col = group.findIndex(e => e.id === ev.id);
+    const total = group.length;
+    widthPct = Math.floor(96 / total);
+    leftPct = 2 + col * widthPct;
+  }
+
+  return `<div class="event-block ${salaClass}" style="top:${topPx}px;height:${heightPx}px;left:${leftPct}%;width:${widthPct}%;right:auto;" onclick="openPanelById('${ev.id}'); event.stopPropagation();">
     <div class="event-title">${escHtml(ev.title)}</div>
     ${heightPx > 36 ? `<div class="event-time">${formatTime(start)}-${formatTime(end)}</div>` : ''}
     ${heightPx > 52 ? `<div class="event-organizer">${escHtml(ev.organizer)}</div>` : ''}

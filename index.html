@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="Salas">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<title>Salas Orbit Garant</title>
+<title>Reserva de Salas</title>
 <style>
   :root {
     --bg: #0f172a;
@@ -310,7 +310,7 @@
 <div id="app">
   <!-- Top Nav -->
   <nav class="topnav">
-    <div class="nav-logo">Salas Orbit Garant</div>
+    <div class="nav-logo">Salas de Reuniones</div>
     <div class="nav-spacer"></div>
     <div class="sync-status" id="sync-status">
       <div class="sync-dot online" id="sync-dot"></div>
@@ -336,8 +336,8 @@
       <button class="view-btn" id="vbtn-day" onclick="setView('day')">Día</button>
     </div>
     <div class="sala-legend">
-      <div class="legend-item"><div class="legend-dot" style="background:var(--sala1)"></div><span id="legend-sala1">Sala de Reuniones Piso 1</span></div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--sala2)"></div><span id="legend-sala2">Sala de Reuniones Piso 2</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--sala1)"></div><span id="legend-sala1">Sala A</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--sala2)"></div><span id="legend-sala2">Sala B</span></div>
     </div>
     <button class="btn-new" onclick="openBookingModal()">
       <span style="font-size:1.1rem">+</span> <span>Nueva reserva</span>
@@ -367,11 +367,11 @@
     <div class="sala-selector">
       <div class="sala-card sala1-card" id="sc-sala1" onclick="selectSala(1)">
         <div class="sala-icon" style="width:18px;height:18px;border-radius:4px;background:var(--sala1);margin:0 auto 6px;"></div>
-        <div class="sala-name" id="sc-sala1-name">Sala de Reuniones Piso 1</div>
+        <div class="sala-name" id="sc-sala1-name">Sala A</div>
       </div>
       <div class="sala-card sala2-card" id="sc-sala2" onclick="selectSala(2)">
         <div class="sala-icon" style="width:18px;height:18px;border-radius:4px;background:var(--sala2);margin:0 auto 6px;"></div>
-        <div class="sala-name" id="sc-sala2-name">Sala de Reuniones Piso 2</div>
+        <div class="sala-name" id="sc-sala2-name">Sala B</div>
       </div>
     </div>
 
@@ -477,16 +477,16 @@
 // Configuración incrustada - los usuarios no necesitan configurar nada
 // ── CONFIGURACIÓN CENTRAL (no modificar sin autorización) ──
 const CFG_DEFAULT = {
-  clientId: '16a7ccce-c68d-4a5a-aa4a-5f221fb12fdc',
-  tenantId: '8a388a20-e77f-4161-917d-91eb5f69b4be',
-  sala1Name: 'Sala de Reuniones Piso 1',
-  sala2Name: 'Sala de Reuniones Piso 2',
+  clientId: 'aadecb73-ba9b-4c1b-aa24-c8330fbddbb6',
+  tenantId: 'dfae8d3b-8fb0-4e29-8b7b-42e7d17142cf',
+  sala1Name: 'Sala A',
+  sala2Name: 'Sala B',
   sala1Email: '',
   sala2Email: '',
   // Cuenta cuyo calendario es la fuente central de verdad
-  centralAccount: 'Sala.reuniones@orbitgarant.cl',
+  centralAccount: 'asistenteti@mdai.cl',
   // Emails que pueden eliminar cualquier reserva
-  adminEmails: ['soporte@orbitgarant.cl', 'Sala.reuniones@orbitgarant.cl']
+  adminEmails: ['aquintanilla@mdai.cl', 'asistenteti@mdai.cl']
 };
 const CFG_SAVED = JSON.parse(localStorage.getItem('salasapp_config') || '{}');
 let CFG = {
@@ -898,7 +898,14 @@ function checkConflict(sala, startDt, endDt, excludeId = null) {
   const start = new Date(startDt).getTime();
   const end = new Date(endDt).getTime();
   return events.some(e => {
-    if (e.id === excludeId || e.sala !== sala) return false;
+    if (e.sala !== sala) return false;
+    // Exclude single event
+    if (excludeId && !excludeId.startsWith('__series__') && e.id === excludeId) return false;
+    // Exclude entire series
+    if (excludeId && excludeId.startsWith('__series__')) {
+      const rg = excludeId.replace('__series__', '');
+      if (e.recurGroup === rg) return false;
+    }
     const eStart = new Date(e.start).getTime();
     const eEnd = new Date(e.end).getTime();
     return start < eEnd && end > eStart;
@@ -993,8 +1000,10 @@ function editBooking(id) {
 // ── ATTENDEES AUTOCOMPLETE ──
 // ── DIRECTORIO BASE (siempre disponible) ──
 const MDA_USERS_BASE = [
-  { name: 'Soporte Orbit', email: 'soporte@orbitgarant.cl', freq: 0 },
-  { name: 'Sala Reuniones', email: 'Sala.reuniones@orbitgarant.cl', freq: 0 },
+  { name: 'Asistente TI', email: 'asistenteti@mdai.cl', freq: 0 },
+  { name: 'RRHH MDA', email: 'rrhh@mdai.cl', freq: 0 },
+  { name: 'Soporte', email: 'soporte@mdai.cl', freq: 0 },
+  { name: 'Alejandro Quintanilla', email: 'aquintanilla@mdai.cl', freq: 0 },
 ];
 
 // ── DIRECTORIO DINÁMICO (aprendido de invitaciones pasadas) ──
@@ -1214,8 +1223,19 @@ function checkFormConflict() {
     showConflict('La hora de fin debe ser posterior a la de inicio.');
     return;
   }
-  const conflict = checkConflict(selectedSala, startDt, endDt);
-  if (conflict) showConflict('Esta sala ya está reservada en ese horario.');
+  // When editing, exclude the event being edited (and its series) from conflict check
+  let excludeId = null;
+  if (editingEventId) {
+    if (editingEventId.startsWith('series:')) {
+      // For series edits, find the recurGroup and exclude all events in it
+      const rg = editingEventId.replace('series:', '');
+      excludeId = '__series__' + rg;
+    } else {
+      excludeId = editingEventId;
+    }
+  }
+  const conflict = checkConflict(selectedSala, startDt, endDt, excludeId);
+  if (conflict) showConflict('Esta sala ya esta reservada en ese horario.');
   else hideConflict();
 }
 

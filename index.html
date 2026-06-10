@@ -73,33 +73,36 @@
 
   /* ── TEMA ROSADO ── */
   [data-theme="pink"] {
-    --bg: #1a0a14;
-    --bg2: #2d1020;
-    --bg3: #4a1a33;
-    --surface: #2d1020;
-    --surface2: #3d1628;
+    --bg: #fff0f6;
+    --bg2: #ffffff;
+    --bg3: #fce7f3;
+    --surface: #ffffff;
+    --surface2: #fdf2f8;
     --border: rgba(236,72,153,0.12);
-    --border2: rgba(236,72,153,0.22);
-    --text: #fdf2f8;
-    --text2: #f9a8d4;
-    --text3: #ec4899;
+    --border2: rgba(236,72,153,0.25);
+    --text: #500724;
+    --text2: #9d174d;
+    --text3: #db2777;
     --accent: #db2777;
     --accent2: #be185d;
-    --sala1: #9d174d;
-    --sala1bg: rgba(157,23,77,0.2);
-    --sala1border: rgba(157,23,77,0.5);
-    --sala2: #a855f7;
-    --sala2bg: rgba(168,85,247,0.15);
-    --sala2border: rgba(168,85,247,0.4);
-    --danger: #f43f5e;
-    --success: #34d399;
-    --warning: #fbbf24;
-    --shadow: 0 4px 24px rgba(219,39,119,0.25);
+    --sala1: #be185d;
+    --sala1bg: rgba(190,24,93,0.1);
+    --sala1border: rgba(190,24,93,0.4);
+    --sala2: #7c3aed;
+    --sala2bg: rgba(124,58,237,0.1);
+    --sala2border: rgba(124,58,237,0.35);
+    --danger: #e11d48;
+    --success: #059669;
+    --warning: #d97706;
+    --shadow: 0 4px 24px rgba(219,39,119,0.15);
   }
-  [data-theme="pink"] .event-block.sala1 { color: #fda4af; }
-  [data-theme="pink"] .event-block.sala2 { color: #d8b4fe; }
+  [data-theme="pink"] .event-block.sala1 { color: #881337; }
+  [data-theme="pink"] .event-block.sala2 { color: #4c1d95; }
   [data-theme="pink"] .auth-logo { background: linear-gradient(135deg, #db2777, #a855f7); }
   [data-theme="pink"] .avatar { background: linear-gradient(135deg, #db2777, #a855f7); }
+  [data-theme="pink"] .time-cell:hover { background: rgba(219,39,119,0.05); }
+  [data-theme="pink"] .btn-ms { background: #db2777; }
+  [data-theme="pink"] .btn-ms:hover { background: #be185d; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
   
@@ -845,6 +848,24 @@ async function syncFromGraph() {
   }
 }
 
+// Extract attendees list from event body HTML
+function extractAttendeesFromBody(bodyHtml) {
+  if (!bodyHtml) return [];
+  const plain = bodyHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  // Body format includes attendees if they were added
+  // Try to find email addresses that are not the central account
+  const emails = [];
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+  const found = plain.match(emailRegex) || [];
+  found.forEach(email => {
+    const e = email.toLowerCase();
+    if (e !== CFG.centralAccount.toLowerCase() && !emails.includes(e)) {
+      emails.push(e);
+    }
+  });
+  return emails;
+}
+
 // Extract real organizer name from event body HTML
 function extractOrganizer(ge) {
   const body = ge.body?.content || '';
@@ -880,20 +901,26 @@ function mergeGraphEvents(graphEvents) {
     const sala = detectSala(ge);
     if (!sala) return; // ignorar eventos que no son de salas
     const idx = events.findIndex(e => e.graphId === ge.id);
+    // Preserve local-only fields (attendees, isRecurring, recurGroup) when updating
+    const existing = idx >= 0 ? events[idx] : null;
     const ev = {
       id: 'graph_' + ge.id,
       graphId: ge.id,
-      title: (ge.subject || 'Reunión').replace(/^\[Sala [AB]\]\s*/i, ''),
+      title: (ge.subject || 'Reunion').replace(/^\[Sala [^)]+\]\s*/i, '').replace(/^\[Sala de Reuniones [^)]+\]\s*/i, ''),
       sala: sala,
       start: ge.start.dateTime || ge.start,
       end: ge.end.dateTime || ge.end,
       organizer: extractOrganizer(ge),
       organizerEmail: extractOrganizerEmail(ge),
       teamsUrl: ge.onlineMeeting?.joinUrl || null,
-      description: extractDescription(ge.body?.content || '')
+      description: extractDescription(ge.body?.content || ''),
+      // Preserve these fields from local copy if they exist
+      attendees: existing?.attendees || extractAttendeesFromBody(ge.body?.content || ''),
+      isRecurring: existing?.isRecurring || false,
+      recurGroup: existing?.recurGroup || null
     };
-    if (idx >= 0) events[idx] = ev; // actualizar existente
-    else events.push(ev);           // agregar nuevo
+    if (idx >= 0) events[idx] = ev;
+    else events.push(ev);
   });
   saveEvents();
 }
@@ -1439,7 +1466,7 @@ async function createBooking() {
     }
 
     const eventData = {
-      id: 'local_' + Date.now() + '_' + d,
+      id: 'local_' + Date.now() + '_' + d + '_' + Math.random().toString(36).slice(2,7),
       title,
       sala: selectedSala,
       start: s,
@@ -1517,7 +1544,16 @@ function openPanel(event) {
       <div class="panel-field-value">${escHtml(event.organizer)}</div>
     </div>
     ${event.description ? `<div class="panel-field"><div class="panel-field-label">DESCRIPCION</div><div class="panel-field-value" style="color:var(--text2);font-size:.85rem">${escHtml(event.description.replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').trim())}</div></div>` : ''}
-    ${event.attendees && event.attendees.length > 0 ? `<div class="panel-field"><div class="panel-field-label">PARTICIPANTES</div><div class="panel-field-value" style="color:var(--text2);font-size:.85rem">${event.attendees.map(a => escHtml(a)).join('<br>')}</div></div>` : ''}
+    ${event.attendees && event.attendees.length > 0 ? `<div class="panel-field">
+      <div class="panel-field-label">PARTICIPANTES</div>
+      <div id="panel-attendees-list" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;">
+        ${event.attendees.map(a => `
+          <div class="attendee-tag" style="display:inline-flex;align-items:center;gap:4px;">
+            ${escHtml(a)}
+            ${canCancelEvent(event) ? `<button onclick="removeAttendeeFromEvent('${event.id}','${a}')" title="Quitar" style="background:none;border:none;color:#93c5fd;cursor:pointer;font-size:.85rem;padding:0 2px;">x</button>` : ''}
+          </div>`).join('')}
+      </div>
+    </div>` : ''}
     <hr class="panel-divider">
     ${event.teamsUrl ? `<a href="${event.teamsUrl}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:11px 14px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:var(--radius);color:#93c5fd;text-decoration:none;font-size:.85rem;font-weight:600;margin-bottom:.75rem;">&#x25B6; Unirse a la reuni&#243;n de Teams</a>` : ''}
     ${canCancelEvent(event) ? `
@@ -1541,6 +1577,34 @@ function canCancelEvent(event) {
 function closePanel() {
   document.getElementById('detail-panel').classList.remove('open');
   selectedEvent = null;
+}
+
+function removeAttendeeFromEvent(eventId, email) {
+  if (!confirm('Quitar a ' + email + ' de esta reunion?')) return;
+  const ev = events.find(e => e.id === eventId);
+  if (!ev) return;
+  ev.attendees = (ev.attendees || []).filter(a => a !== email);
+  saveEvents();
+  // Update the panel display
+  openPanel(ev);
+  // If event has graphId, update in Graph
+  if (ev.graphId && isGraphAvailable) {
+    getAccessToken().then(token => {
+      const myEmail = currentUser?.username?.toLowerCase();
+      const isCentral = myEmail === CFG.centralAccount.toLowerCase();
+      const url = isCentral
+        ? 'https://graph.microsoft.com/v1.0/me/events/' + ev.graphId
+        : 'https://graph.microsoft.com/v1.0/users/' + CFG.centralAccount + '/events/' + ev.graphId;
+      fetch(url, {
+        method: 'PATCH',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          attendees: ev.attendees.map(a => ({ emailAddress: { address: a }, type: 'required' }))
+        })
+      }).catch(e => console.error('patch attendees error:', e));
+    });
+  }
+  toast('Participante eliminado', 'success');
 }
 
 async function cancelBooking(id) {
@@ -1993,7 +2057,7 @@ if ('serviceWorker' in navigator) {
 </script>
 <div style="position:fixed;bottom:10px;right:14px;z-index:9999;text-align:right;pointer-events:none;">
   <div style="font-size:.7rem;color:rgba(148,163,184,0.55);line-height:1.7;font-family:monospace;letter-spacing:.03em;">
-    <div style="font-weight:600;">v1.3.2</div>
+    <div style="font-weight:600;">v1.4.3</div>
     <div style="font-size:.62rem;color:rgba(148,163,184,0.4);">alacalufe-software</div>
   </div>
 </div>
